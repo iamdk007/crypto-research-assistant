@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f7fb">
+  <title>SignalDesk — AI Crypto Research Assistant</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --surface: #ffffff;
+      --surface-soft: #f8faff;
+      --text: #182230;
+      --muted: #667085;
+      --line: #e4e9f1;
+      --blue: #315efb;
+      --blue-dark: #2449d8;
+      --blue-soft: #edf2ff;
+      --green: #16794b;
+      --green-soft: #e9f8f0;
+      --amber: #946200;
+      --amber-soft: #fff5d9;
+      --red: #b42318;
+      --shadow: 0 10px 30px rgba(21, 34, 66, .06);
+      --radius: 18px;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.5;
+    }
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    a { color: inherit; }
+    .app { min-height: 100vh; }
+    .topbar {
+      position: sticky; top: 0; z-index: 5;
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      padding: 14px clamp(16px, 4vw, 44px);
+      background: rgba(255,255,255,.92);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--line);
+    }
+    .brand { display: flex; align-items: center; gap: 11px; font-weight: 800; letter-spacing: -.03em; }
+    .brand-mark {
+      width: 38px; height: 38px; display: grid; place-items: center;
+      border-radius: 12px; background: var(--blue); color: white; font-size: 20px;
+      box-shadow: 0 6px 14px rgba(49,94,251,.22);
+    }
+    .brand small { display: block; color: var(--muted); font-weight: 500; font-size: 11px; letter-spacing: .02em; }
+    .top-actions { display: flex; align-items: center; gap: 10px; }
+    .demo-pill {
+      display: inline-flex; align-items: center; gap: 7px; padding: 7px 10px;
+      border: 1px solid #f0dca2; border-radius: 999px; color: var(--amber);
+      background: var(--amber-soft); font-size: 12px; font-weight: 750; white-space: nowrap;
+    }
+    .demo-dot { width: 7px; height: 7px; background: #d99a00; border-radius: 50%; }
+    .layout { max-width: 1320px; margin: 0 auto; padding: 30px clamp(16px, 4vw, 44px) 56px; }
+    .hero { display: flex; justify-content: space-between; align-items: flex-end; gap: 22px; margin-bottom: 24px; }
+    .eyebrow { color: var(--blue); font-size: 11px; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
+    h1 { margin: 7px 0 8px; font-size: clamp(28px, 4vw, 42px); letter-spacing: -.045em; line-height: 1.12; }
+    .hero p { max-width: 650px; margin: 0; color: var(--muted); font-size: 15px; }
+    .hero-note { max-width: 220px; color: var(--muted); font-size: 12px; text-align: right; }
+    .notice {
+      display: flex; align-items: flex-start; gap: 10px; padding: 13px 15px;
+      border: 1px solid #f0dca2; border-radius: 13px; background: #fffbef;
+      color: #70510a; font-size: 13px; margin-bottom: 22px;
+    }
+    .notice strong { color: #674900; }
+    .main-grid { display: grid; grid-template-columns: minmax(280px, .82fr) minmax(0, 1.45fr); gap: 22px; align-items: start; }
+    .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+    .panel-head { padding: 21px 22px 17px; border-bottom: 1px solid var(--line); }
+    .panel-head h2 { margin: 0 0 4px; font-size: 17px; letter-spacing: -.02em; }
+    .panel-head p { margin: 0; color: var(--muted); font-size: 13px; }
+    .panel-body { padding: 22px; }
+    .field { margin-bottom: 17px; }
+    label { display: block; margin-bottom: 7px; font-size: 12px; font-weight: 750; color: #344054; }
+    .optional { color: #98a2b3; font-weight: 500; }
+    input, select, textarea {
+      width: 100%; border: 1px solid #d7deea; border-radius: 11px;
+      background: white; color: var(--text); padding: 12px 13px; outline: none;
+      transition: border .15s, box-shadow .15s;
+    }
+    input:focus, select:focus, textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(49,94,251,.12); }
+    textarea { min-height: 95px; resize: vertical; }
+    .hint { margin-top: 6px; color: var(--muted); font-size: 11px; }
+    .two-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .primary, .secondary, .ghost {
+      display: inline-flex; justify-content: center; align-items: center; gap: 8px;
+      border-radius: 11px; padding: 12px 15px; font-weight: 750; font-size: 13px;
+      transition: transform .12s, background .12s; border: 1px solid transparent;
+    }
+    .primary { width: 100%; color: white; background: var(--blue); }
+    .primary:hover { background: var(--blue-dark); }
+    .primary:active, .secondary:active, .ghost:active { transform: translateY(1px); }
+    .secondary { color: var(--blue); background: var(--blue-soft); border-color: #dce5ff; }
+    .ghost { color: #475467; background: white; border-color: var(--line); }
+    .result-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+    .result-top h2 { margin: 0 0 4px; font-size: 19px; letter-spacing: -.025em; overflow-wrap: anywhere; }
+    .result-top p { margin: 0; color: var(--muted); font-size: 12px; }
+    .result-actions { display: flex; gap: 8px; flex-shrink: 0; }
+    .result-actions button { padding: 9px 11px; font-size: 12px; }
+    .tag-row { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 15px; }
+    .tag { display: inline-flex; padding: 5px 9px; border-radius: 999px; background: #f0f3f8; color: #475467; font-size: 11px; font-weight: 700; }
+    .tag.demo { background: var(--amber-soft); color: var(--amber); }
+    .score-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 11px; margin: 19px 0; }
+    .score-card { padding: 14px; border: 1px solid var(--line); background: var(--surface-soft); border-radius: 13px; min-width: 0; }
+    .score-label { font-size: 11px; color: var(--muted); font-weight: 650; }
+    .score-value { margin: 5px 0 3px; font-size: 21px; font-weight: 800; letter-spacing: -.04em; }
+    .score-caption { color: var(--muted); font-size: 10px; }
+    .section { padding: 19px 0; border-top: 1px solid var(--line); }
+    .section:first-of-type { border-top: 0; }
+    .section-title { display: flex; align-items: center; gap: 9px; margin: 0 0 10px; font-size: 14px; font-weight: 800; }
+    .section-icon { width: 27px; height: 27px; display: grid; place-items: center; border-radius: 8px; background: var(--blue-soft); color: var(--blue); font-size: 13px; }
+    .section p { margin: 0; color: #475467; font-size: 13px; }
+    .list { margin: 0; padding-left: 19px; color: #475467; font-size: 13px; }
+    .list li { margin: 7px 0; padding-left: 3px; }
+    .risk-row { display: flex; gap: 10px; align-items: flex-start; padding: 11px 0; border-bottom: 1px solid #eef1f6; }
+    .risk-row:last-child { border-bottom: 0; }
+    .risk-level { flex: 0 0 auto; border-radius: 7px; padding: 4px 7px; font-size: 10px; font-weight: 800; text-transform: uppercase; }
+    .risk-medium { color: var(--amber); background: var(--amber-soft); }
+    .risk-high { color: var(--red); background: #fff0ee; }
+    .risk-text { color: #475467; font-size: 12px; }
+    .empty-state { min-height: 410px; display: grid; place-items: center; padding: 35px; text-align: center; }
+    .empty-inner { max-width: 340px; }
+    .empty-icon { width: 58px; height: 58px; margin: 0 auto 17px; display: grid; place-items: center; background: var(--blue-soft); border-radius: 18px; font-size: 26px; }
+    .empty-state h3 { margin: 0 0 7px; font-size: 17px; }
+    .empty-state p { margin: 0; color: var(--muted); font-size: 13px; }
+    .quick-start { margin-top: 18px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+    .quick-start button { border: 1px solid var(--line); background: white; border-radius: 999px; padding: 8px 11px; font-size: 11px; color: #475467; }
+    .quick-start button:hover { border-color: #a9bbff; color: var(--blue); }
+    .footnote { padding: 14px 22px; border-top: 1px solid var(--line); background: #fbfcfe; color: var(--muted); font-size: 11px; }
+    .toast { position: fixed; left: 50%; bottom: 22px; transform: translate(-50%, 20px); opacity: 0; pointer-events: none; background: #182230; color: white; border-radius: 10px; padding: 11px 15px; font-size: 12px; box-shadow: var(--shadow); transition: .2s; z-index: 20; }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    .hidden { display: none !important; }
+    footer { text-align: center; color: #98a2b3; font-size: 11px; padding: 25px 0 0; }
+    @media (max-width: 860px) {
+      .main-grid { grid-template-columns: 1fr; }
+      .hero { align-items: flex-start; flex-direction: column; }
+      .hero-note { text-align: left; max-width: none; }
+      .result-top { flex-direction: column; }
+    }
+    @media (max-width: 520px) {
+      .topbar { padding: 11px 15px; }
+      .brand { font-size: 14px; }
+      .brand-mark { width: 34px; height: 34px; }
+      .top-actions .demo-pill { font-size: 10px; padding: 6px 8px; }
+      .layout { padding: 24px 13px 35px; }
+      .panel-head, .panel-body { padding: 17px; }
+      .score-grid { grid-template-columns: 1fr; }
+      .score-card { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 0 10px; }
+      .score-value { grid-column: 2; grid-row: 1 / span 2; margin: 0; }
+      .score-caption { grid-column: 1; }
+      .two-fields { grid-template-columns: 1fr; gap: 0; }
+      .result-actions { width: 100%; }
+      .result-actions button { flex: 1; }
+      .notice { font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">S</div>
+        <div>SignalDesk <small>CRYPTO RESEARCH ASSISTANT</small></div>
+      </div>
+      <div class="top-actions">
+        <span class="demo-pill"><span class="demo-dot"></span> DEMO MODE</span>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="hero">
+        <div>
+          <div class="eyebrow">Research workspace / Version 1</div>
+          <h1>Research beyond the hype.</h1>
+          <p>Organize a crypto project's thesis, catalysts, risks, and open questions in one clear research brief.</p>
+        </div>
+        <div class="hero-note">Built for careful research.<br>Not financial advice or a trading signal.</div>
+      </section>
+
+      <div class="notice" role="note">
+        <span aria-hidden="true">ⓘ</span>
+        <div><strong>This is a working interface demo.</strong> Results are illustrative examples generated in your browser, not live research or AI output. No API keys, external services, or market data are connected.</div>
+      </div>
+
+      <div class="main-grid">
+        <section class="panel" aria-labelledby="form-title">
+          <div class="panel-head">
+            <h2 id="form-title">Start a research brief</h2>
+            <p>Enter a project or paste a claim you want to investigate.</p>
+          </div>
+          <div class="panel-body">
+            <form id="research-form">
+              <div class="field">
+                <label for="project">Project or protocol name <span style="color:#b42318">*</span></label>
+                <input id="project" name="project" maxlength="80" placeholder="e.g. Uniswap, Bittensor, Aave" required>
+              </div>
+              <div class="field">
+                <label for="ticker">Token ticker <span class="optional">(optional)</span></label>
+                <input id="ticker" name="ticker" maxlength="15" placeholder="e.g. UNI">
+              </div>
+              <div class="field">
+                <label for="category">Research category</label>
+                <select id="category" name="category">
+                  <option value="protocol">Protocol & fundamentals</option>
+                  <option value="token">Token design & supply</option>
+                  <option value="ecosystem">Ecosystem & adoption</option>
+                  <option value="security">Security & risk review</option>
+                  <option value="claim">Check a claim or announcement</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="timeframe">Research timeframe</label>
+                <select id="timeframe" name="timeframe">
+                  <option value="current">Current state (needs fresh sources)</option>
+                  <option value="30d">Next 30 days</option>
+                  <option value="90d">Next 90 days</option>
+                  <option value="long">Long-term thesis</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="claim">Research question or claim <span class="optional">(optional)</span></label>
+                <textarea id="claim" name="claim" maxlength="1200" placeholder="What do you want to verify? e.g. Is protocol usage growing, and what evidence would confirm it?"></textarea>
+                <div class="hint">Avoid sharing passwords, wallet seed phrases, or private keys.</div>
+              </div>
+              <button class="primary" type="submit">Generate demo research brief <span aria-hidden="true">→</span></button>
+            </form>
+          </div>
+          <div class="footnote">Version 1 runs locally in this page. Submitting the form does not contact an AI model.</div>
+        </section>
+
+        <section class="panel" aria-live="polite" aria-labelledby="results-title">
+          <div id="empty-state" class="empty-state">
+            <div class="empty-inner">
+              <div class="empty-icon">⌕</div>
+              <h3>Your research brief starts here</h3>
+              <p>Enter a project on the left to generate a structured demo brief. The example content is a template, not verified project-specific information.</p>
+              <div class="quick-start">
+                <button type="button" data-project="Aave" data-ticker="AAVE">Try Aave</button>
+                <button type="button" data-project="Uniswap" data-ticker="UNI">Try Uniswap</button>
+                <button type="button" data-project="Bittensor" data-ticker="TAO">Try Bittensor</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="results" class="hidden">
+            <div class="panel-head">
+              <div class="result-top">
+                <div>
+                  <h2 id="results-title">Project research brief</h2>
+                  <p id="result-subtitle">Illustrative template · Not verified</p>
+                </div>
+                <div class="result-actions">
+                  <button id="copy-btn" class="secondary" type="button">Copy brief</button>
+                  <button id="reset-btn" class="ghost" type="button">Reset</button>
+                </div>
+              </div>
+              <div class="tag-row">
+                <span class="tag demo">DEMO — NOT AI-GENERATED</span>
+                <span class="tag" id="category-tag">Fundamentals</span>
+                <span class="tag" id="timeframe-tag">Current state</span>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="score-grid">
+                <div class="score-card">
+                  <div class="score-label">Evidence quality</div>
+                  <div class="score-value">Not rated</div>
+                  <div class="score-caption">Sources not connected</div>
+                </div>
+                <div class="score-card">
+                  <div class="score-label">Thesis confidence</div>
+                  <div class="score-value">Unassessed</div>
+                  <div class="score-caption">Requires verification</div>
+                </div>
+                <div class="score-card">
+                  <div class="score-label">Risk profile</div>
+                  <div class="score-value">Review needed</div>
+                  <div class="score-caption">No risk score calculated</div>
+                </div>
+              </div>
+
+              <section class="section">
+                <h3 class="section-title"><span class="section-icon">01</span> Executive summary</h3>
+                <p id="summary-text">This is a neutral research outline. Verify the project's purpose, users, revenue or fee model, and competitive position using primary sources before drawing conclusions.</p>
+              </section>
+              <section class="section">
+                <h3 class="section-title"><span class="section-icon">02</span> Thesis to investigate</h3>
+                <ul class="list" id="thesis-list">
+                  <li>Does the protocol solve a specific problem better than alternatives?</li>
+                  <li>Is usage sustained, measurable, and organic?</li>
+                  <li>Does token demand connect to actual protocol activity?</li>
+                </ul>
+              </section>
+              <section class="section">
+                <h3 class="section-title"><span class="section-icon">03</span> Catalysts to monitor</h3>
+                <ul class="list" id="catalyst-list">
+                  <li>Product releases and roadmap milestones confirmed by official channels.</li>
+                  <li>Changes in users, fees, total value locked, or other relevant usage metrics.</li>
+                  <li>Governance proposals, integrations, unlocks, and exchange or regulatory changes.</li>
+                </ul>
+              </section>
+              <section class="section">
+                <h3 class="section-title"><span class="section-icon">04</span> Risk checklist</h3>
+                <div class="risk-row"><span class="risk-level risk-high">High priority</span><div class="risk-text">Smart-contract, bridge, oracle, and admin-key risks — review audits and incident history.</div></div>
+                <div class="risk-row"><span class="risk-level risk-medium">Token</span><div class="risk-text">Supply schedule, insider allocations, unlock dates, liquidity, and concentration of ownership.</div></div>
+                <div class="risk-row"><span class="risk-level risk-medium">Adoption</span><div class="risk-text">Incentive-driven activity, concentrated usage, competitors, and dependence on a small number of integrations.</div></div>
+              </section>
+              <section class="section">
+                <h3 class="section-title"><span class="section-icon">05</span> Evidence to collect</h3>
+                <ul class="list" id="evidence-list">
+                  <li>Official documentation and recent governance proposals.</li>
+                  <li>Protocol analytics from a reputable data provider, with date ranges recorded.</li>
+                  <li>Tokenomics documentation, unlock schedule, and circulating-supply methodology.</li>
+                  <li>Independent security audits and disclosed incidents.</li>
+                </ul>
+              </section>
+              <section class="section">
+                <h3 class="section-title"><span class="section-icon">06</span> Open questions</h3>
+                <p id="question-text">What evidence would disprove the thesis? Which metrics are independently verifiable? What changed recently, and what is still unknown?</p>
+              </section>
+            </div>
+            <div class="footnote">Demo template only. No facts about the named project have been checked. Confirm all claims with dated, primary sources before relying on them.</div>
+          </div>
+        </section>
+      </div>
+      <footer>SignalDesk · Independent research workspace · Demo build 1.0</footer>
+    </main>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    const form = document.getElementById('research-form');
+    const projectInput = document.getElementById('project');
+    const tickerInput = document.getElementById('ticker');
+    const categoryInput = document.getElementById('category');
+    const timeframeInput = document.getElementById('timeframe');
+    const claimInput = document.getElementById('claim');
+    const emptyState = document.getElementById('empty-state');
+    const results = document.getElementById('results');
+    const toast = document.getElementById('toast');
+    let lastBrief = '';
+
+    const categoryNames = {
+      protocol: 'Protocol & fundamentals',
+      token: 'Token design & supply',
+      ecosystem: 'Ecosystem & adoption',
+      security: 'Security & risk review',
+      claim: 'Claim verification'
+    };
+    const timeframeNames = {
+      current: 'Current state',
+      '30d': 'Next 30 days',
+      '90d': 'Next 90 days',
+      long: 'Long-term thesis'
+    };
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add('show');
+      window.setTimeout(() => toast.classList.remove('show'), 2300);
+    }
+
+    function addListItems(id, items) {
+      const list = document.getElementById(id);
+      list.replaceChildren();
+      items.forEach(item => {
+        const li = document.createElement('li');
+        li.textContent = item;
+        list.appendChild(li);
+      });
+    }
+
+    function makeBrief(project, ticker, category, timeframe, claim) {
+      const name = project.trim();
+      const token = ticker.trim() ? ` (${ticker.trim().toUpperCase()})` : '';
+      document.getElementById('results-title').textContent = name + token;
+      document.getElementById('result-subtitle').textContent = 'Research outline created locally · No sources checked';
+      document.getElementById('category-tag').textContent = categoryNames[category];
+      document.getElementById('timeframe-tag').textContent = timeframeNames[timeframe];
+      document.getElementById('summary-text').textContent =
+        `This brief creates a research framework for ${name}. It does not establish whether the project is strong or weak. Verify its core use case, real usage, economic model, token role, governance, and competitive position with current primary sources.`;
+      const thesis = [
+        `Problem and product: what does ${name} do, who uses it, and what alternatives exist?`,
+        'Usage quality: are active users, transaction activity, fees, or other relevant metrics sustained over time?',
+        'Value capture: does activity create durable value for the protocol or token, and through what mechanism?'
+      ];
+      if (category === 'token') {
+        thesis[2] = 'Token design: what are the token utility, emissions, vesting, unlock schedule, and major holder concentrations?';
+      } else if (category === 'security') {
+        thesis[0] = 'Security model: identify trust assumptions, privileged roles, upgrade paths, dependencies, and past incidents.';
+        thesis[2] = 'Resilience: review independent audits, bug bounties, incident response, and concentration of control.';
+      } else if (category === 'ecosystem') {
+        thesis[0] = 'Ecosystem: identify developers, integrations, users, and applications that rely on the project.';
+      } else if (category === 'claim') {
+        thesis[0] = claim.trim() ? `Claim to verify: “${claim.trim()}”` : 'Write a precise, falsifiable claim and identify who originally made it.';
+        thesis[1] = 'Find the original announcement, data source, publication date, and any relevant definitions or caveats.';
+        thesis[2] = 'Seek independent corroboration and evidence that could contradict the claim.';
+      }
+      addListItems('thesis-list', thesis);
+      addListItems('catalyst-list', [
+        `Official product releases, roadmap milestones, or governance decisions relevant to ${name}.`,
+        'Changes in independently measurable usage, fees, developer activity, or integrations.',
+        `For the selected horizon (${timeframeNames[timeframe].toLowerCase()}): check dated announcements and token unlocks rather than assuming a catalyst exists.`
+      ]);
+      addListItems('evidence-list', [
+        `Official documentation and dated announcements from ${name}.`,
+        'Independent analytics with definitions, dates, and methodology clearly shown.',
+        'Tokenomics, circulating supply, vesting and unlock information from verifiable sources.',
+        'Security audits, governance records, incident disclosures, and credible independent analysis.'
+      ]);
+      document.getElementById('question-text').textContent =
+        claim.trim()
+          ? `Your question: “${claim.trim()}” What primary evidence would confirm it, what evidence would refute it, and which important details remain unknown?`
+          : 'What evidence would disprove the thesis? Which metrics are independently verifiable? What changed recently, and what is still unknown?';
+
+      lastBrief = [
+        `${name}${token} — Research brief (DEMO; not verified; not AI-generated)`,
+        `Category: ${categoryNames[category]}`,
+        `Timeframe: ${timeframeNames[timeframe]}`,
+        '',
+        document.getElementById('summary-text').textContent,
+        '',
+        'THESIS TO INVESTIGATE',
+        ...thesis.map(x => '- ' + x),
+        '',
+        'CATALYSTS TO MONITOR',
+        ...Array.from(document.querySelectorAll('#catalyst-list li')).map(x => '- ' + x.textContent),
+        '',
+        'RISK CHECKLIST',
+        ...Array.from(document.querySelectorAll('.risk-text')).map(x => '- ' + x.textContent),
+        '',
+        'EVIDENCE TO COLLECT',
+        ...Array.from(document.querySelectorAll('#evidence-list li')).map(x => '- ' + x.textContent),
+        '',
+        'OPEN QUESTIONS',
+        document.getElementById('question-text').textContent,
+        '',
+        'Disclaimer: This is a browser-generated research template. No project facts, sources, live data, or AI output were checked.'
+      ].join('\n');
+
+      emptyState.classList.add('hidden');
+      results.classList.remove('hidden');
+      document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    form.addEventListener('submit', event => {
+      event.preventDefault();
+      if (!projectInput.value.trim()) {
+        projectInput.focus();
+        showToast('Enter a project or protocol name first.');
+        return;
+      }
+      makeBrief(projectInput.value, tickerInput.value, categoryInput.value, timeframeInput.value, claimInput.value);
+    });
+
+    document.querySelectorAll('[data-project]').forEach(button => {
+      button.addEventListener('click', () => {
+        projectInput.value = button.dataset.project;
+        tickerInput.value = button.dataset.ticker || '';
+        categoryInput.value = 'protocol';
+        projectInput.focus();
+      });
+    });
+
+    document.getElementById('copy-btn').addEventListener('click', async () => {
+      if (!lastBrief) return;
+      try {
+        await navigator.clipboard.writeText(lastBrief);
+        showToast('Research brief copied.');
+      } catch (error) {
+        const area = document.createElement('textarea');
+        area.value = lastBrief;
+        area.style.position = 'fixed';
+        area.style.opacity = '0';
+        document.body.appendChild(area);
+        area.select();
+        const copied = document.execCommand('copy');
+        area.remove();
+        showToast(copied ? 'Research brief copied.' : 'Copy unavailable. Select and copy the brief manually.');
+      }
+    });
+
+    document.getElementById('reset-btn').addEventListener('click', () => {
+      results.classList.add('hidden');
+      emptyState.classList.remove('hidden');
+      form.reset();
+      lastBrief = '';
+      document.getElementById('form-title').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  </script>
+</body>
+</html>
