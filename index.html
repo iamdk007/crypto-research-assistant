@@ -267,7 +267,18 @@
                 <span class="tag" id="timeframe-tag">Current state</span>
               </div>
             </div>
-            <div class="panel-body">
+            <div id="ai-results" class="panel-body hidden">
+              <div class="notice" style="margin-bottom:16px">
+                <span aria-hidden="true">✓</span>
+                <div><strong>AI-generated response.</strong> This answer came from Gemini, but this version does not browse the web or independently verify claims.</div>
+              </div>
+              <section class="section" style="border-top:0;padding-top:0">
+                <h3 class="section-title"><span class="section-icon">AI</span> Research analysis</h3>
+                <div id="ai-answer" style="white-space:pre-wrap;overflow-wrap:anywhere;color:#344054;font-size:13px"></div>
+              </section>
+              <div class="hint">Check important claims against dated primary sources. AI output can be incomplete or wrong.</div>
+            </div>
+            <div id="demo-results-body" class="panel-body">
               <div class="score-grid">
                 <div class="score-card">
                   <div class="score-label">Evidence quality</div>
@@ -450,14 +461,59 @@
       document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
-    form.addEventListener('submit', event => {
+    form.addEventListener('submit', async event => {
       event.preventDefault();
       if (!projectInput.value.trim()) {
         projectInput.focus();
         showToast('Enter a project or protocol name first.');
         return;
       }
-      makeBrief(projectInput.value, tickerInput.value, categoryInput.value, timeframeInput.value, claimInput.value);
+
+      const submitButton = form.querySelector('button[type="submit"]');
+      const originalButtonText = submitButton.innerHTML;
+      submitButton.disabled = true;
+      submitButton.textContent = 'Researching with Gemini…';
+
+      try {
+        const response = await fetch('/api/research', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            project: projectInput.value.trim(),
+            ticker: tickerInput.value.trim(),
+            category: categoryInput.value,
+            timeframe: timeframeInput.value,
+            claim: claimInput.value.trim()
+          })
+        });
+
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || `Request failed (${response.status}).`);
+        if (typeof data.answer !== 'string' || !data.answer.trim()) {
+          throw new Error('The AI returned an empty response.');
+        }
+
+        document.getElementById('results-title').textContent =
+          projectInput.value.trim() +
+          (tickerInput.value.trim() ? ` (${tickerInput.value.trim().toUpperCase()})` : '');
+        document.getElementById('result-subtitle').textContent = 'Gemini response · Web sources not checked';
+        document.getElementById('category-tag').textContent = categoryNames[categoryInput.value];
+        document.getElementById('timeframe-tag').textContent = timeframeNames[timeframeInput.value];
+        document.getElementById('ai-answer').textContent = data.answer;
+        document.getElementById('ai-results').classList.remove('hidden');
+        document.getElementById('demo-results-body').classList.add('hidden');
+        document.querySelector('#results .footnote').textContent =
+          'AI-generated analysis only. No live web search or independent fact-checking was performed.';
+        lastBrief = `${projectInput.value.trim()} — Gemini research analysis (web sources not checked)\n\n${data.answer}\n\nReminder: verify important claims against primary sources.`;
+        emptyState.classList.add('hidden');
+        results.classList.remove('hidden');
+        document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } catch (error) {
+        showToast(error.message || 'Could not reach the AI backend.');
+      } finally {
+        submitButton.disabled = false;
+        submitButton.innerHTML = originalButtonText;
+      }
     });
 
     document.querySelectorAll('[data-project]').forEach(button => {
@@ -490,6 +546,8 @@
     document.getElementById('reset-btn').addEventListener('click', () => {
       results.classList.add('hidden');
       emptyState.classList.remove('hidden');
+      document.getElementById('ai-results').classList.add('hidden');
+      document.getElementById('demo-results-body').classList.remove('hidden');
       form.reset();
       lastBrief = '';
       document.getElementById('form-title').scrollIntoView({ behavior: 'smooth', block: 'start' });
